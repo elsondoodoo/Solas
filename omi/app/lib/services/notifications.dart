@@ -1,0 +1,273 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:math';
+import 'dart:ui';
+
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:omi/backend/http/api/notifications.dart';
+import 'package:omi/backend/schema/message.dart';
+import 'package:omi/main.dart';
+import 'package:omi/pages/home/page.dart';
+import 'package:intercom_flutter/intercom_flutter.dart';
+
+class NotificationService {
+  NotificationService._();
+
+  static NotificationService instance = NotificationService._();
+  MethodChannel platform = const MethodChannel('com.friend.ios/notifyOnKill');
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
+  final channel = NotificationChannel(
+    channelGroupKey: 'channel_group_key',
+    channelKey: 'channel',
+    channelName: 'Omi Notifications',
+    channelDescription: 'Notification channel for Omi',
+    defaultColor: const Color(0xFF9D50DD),
+    ledColor: Colors.white,
+  );
+
+// TODO: could not install the latest version due to podfile issues, so installed 0.8.3
+// https://pub.dev/packages/awesome_notifications/versions/0.8.3
+  final AwesomeNotifications _awesomeNotifications = AwesomeNotifications();
+
+  Future<void> initialize() async {
+    await _initializeAwesomeNotifications();
+    // Calling it here because the APNS token can sometimes arrive early or it might take some time (like a few seconds)
+    // Reference: https://github.com/firebase/flutterfire/issues/12244#issuecomment-1969286794
+    await _firebaseMessaging.getAPNSToken();
+    listenForMessages();
+  }
+
+  Future<void> _initializeAwesomeNotifications() async {
+    bool initialized = await _awesomeNotifications.initialize(
+        // set the icon to null if you want to use the default app icon
+        'resource://drawable/icon',
+        [
+          NotificationChannel(
+            channelGroupKey: 'channel_group_key',
+            channelKey: channel.channelKey,
+            channelName: channel.channelName,
+            channelDescription: channel.channelDescription,
+            defaultColor: const Color(0xFF9D50DD),
+            ledColor: Colors.white,
+          )
+        ],
+        // Channel groups are only visual and are not required
+        channelGroups: [
+          NotificationChannelGroup(
+            channelGroupKey: channel.channelKey!,
+            channelGroupName: channel.channelName!,
+          )
+        ],
+        debug: false);
+
+    debugPrint('initializeNotifications: $initialized');
+  }
+
+  void showNotification({
+    required int id,
+    required String title,
+    required String body,
+    Map<String, String?>? payload,
+    bool wakeUpScreen = false,
+    NotificationSchedule? schedule,
+    NotificationLayout layout = NotificationLayout.Default,
+  }) {
+    _awesomeNotifications.createNotification(
+      content: NotificationContent(
+        id: id,
+        channelKey: channel.channelKey!,
+        actionType: ActionType.Default,
+        title: title,
+        body: body,
+        payload: payload,
+        notificationLayout: layout,
+      ),
+    );
+  }
+
+  Future<bool> requestNotificationPermissions() async {
+    bool isAllowed = await _awesomeNotifications.isNotificationAllowed();
+    if (!isAllowed) {
+      isAllowed = await _awesomeNotifications.requestPermissionToSendNotifications();
+      register();
+    }
+    return isAllowed;
+  }
+
+  // Whereever this method is awaited, it will cause the app to not move forwared in execution due to it being a method call.
+  // This was also the culprit when we had the app freeze on splash screen.
+  Future<void> register() async {
+    try {
+      await platform.invokeMethod(
+        'setNotificationOnKillService',
+        {
+          'title': "Your Omi Device Disconnected",
+          'description': "Please keep your app opened to continue using your Omi.",
+        },
+      );
+    } catch (e) {
+      debugPrint('NotifOnKill error: $e');
+    }
+  }
+
+  Future<String> getTimeZone() async {
+    final String currentTimeZone = await FlutterTimezone.getLocalTimezone();
+    return currentTimeZone;
+  }
+
+  Future<void> saveFcmToken(String? token) async {
+    if (token == null) return;
+    String timeZone = await getTimeZone();
+    if (FirebaseAuth.instance.currentUser != null && token.isNotEmpty) {
+      await Intercom.instance.sendTokenToIntercom(token);
+      await saveFcmTokenServer(token: token, timeZone: timeZone);
+    }
+  }
+
+  void saveNotificationToken() async {
+    if (Platform.isIOS) {
+      await _firebaseMessaging.getAPNSToken();
+    }
+    String? token = await _firebaseMessaging.getToken();
+    await saveFcmToken(token);
+    _firebaseMessaging.onTokenRefresh.listen(saveFcmToken);
+  }
+
+  Future<bool> hasNotificationPermissions() async {
+    return await _awesomeNotifications.isNotificationAllowed();
+  }
+
+  Future<void> createNotification({
+    String title = '',
+    String body = '',
+    int notificationId = 1,
+    Map<String, String?>? payload,
+  }) async {
+    var allowed = await _awesomeNotifications.isNotificationAllowed();
+    debugPrint('createNotification: $allowed');
+    if (!allowed) return;
+    debugPrint('createNotification ~ Creating notification: $title');
+    showNotification(id: notificationId, title: title, body: body, wakeUpScreen: true, payload: payload);
+  }
+
+  clearNotification(int id) => _awesomeNotifications.cancel(id);
+
+  // FIXME: Causes the different behavior on android and iOS
+  bool _shouldShowForegroundNotificationOnFCMMessageReceived() {
+    return Platform.isAndroid;
+  }
+
+  Future<void> listenForMessages() async {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final data = message.data;
+      final noti = message.notification;
+
+      // Plugin
+      if (data.isNotEmpty) {
+        late Map<String, String> payload = <String, String>{};
+        payload.addAll({
+          "navigate_to": data['navigate_to'] ?? "",
+        });
+
+        // plugin, daily summary
+        final notificationType = data['notification_type'];
+        if (notificationType == 'plugin' || notificationType == 'daily_summary') {
+          data['from_integration'] = data['from_integration'] == 'true';
+          _serverMessageStreamController.add(ServerMessage.fromJson(data));
+        }
+        if (noti != null && _shouldShowForegroundNotificationOnFCMMessageReceived()) {
+          _showForegroundNotification(noti: noti, payload: payload);
+        }
+        return;
+      }
+
+      // Announcement likes
+      if (noti != null && _shouldShowForegroundNotificationOnFCMMessageReceived()) {
+        _showForegroundNotification(noti: noti, layout: NotificationLayout.BigText);
+        return;
+      }
+    });
+  }
+
+  final _serverMessageStreamController = StreamController<ServerMessage>.broadcast();
+
+  Stream<ServerMessage> get listenForServerMessages => _serverMessageStreamController.stream;
+
+  Future<void> _showForegroundNotification(
+      {required RemoteNotification noti,
+      NotificationLayout layout = NotificationLayout.Default,
+      Map<String, String?>? payload}) async {
+    final id = Random().nextInt(10000);
+    showNotification(id: id, title: noti.title!, body: noti.body!, layout: layout, payload: payload);
+  }
+}
+
+class NotificationUtil {
+  static ReceivePort? receivePort;
+
+  static Future<void> initializeNotificationsEventListeners() async {
+    // Only after at least the action method is set, the notification events are delivered
+    AwesomeNotifications().setListeners(onActionReceivedMethod: NotificationUtil.onActionReceivedMethod);
+  }
+
+  static Future<void> initializeIsolateReceivePort() async {
+    receivePort = ReceivePort('Notification action port in main isolate');
+    receivePort!.listen((serializedData) {
+      final receivedAction = ReceivedAction().fromMap(serializedData);
+      onActionReceivedMethodImpl(receivedAction);
+    });
+
+    // This initialization only happens on main isolate
+    IsolateNameServer.registerPortWithName(receivePort!.sendPort, 'notification_action_port');
+  }
+
+  /// Use this method to detect when the user taps on a notification or action button
+  @pragma("vm:entry-point")
+  static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
+    if (receivePort != null) {
+      await onActionReceivedMethodImpl(receivedAction);
+    } else {
+      print(
+          'onActionReceivedMethod was called inside a parallel dart isolate, where receivePort was never initialized.');
+      SendPort? sendPort = IsolateNameServer.lookupPortByName('notification_action_port');
+
+      if (sendPort != null) {
+        print('Redirecting the execution to main isolate process in listening...');
+        dynamic serializedData = receivedAction.toMap();
+        sendPort.send(serializedData);
+      }
+    }
+  }
+
+  static Future<void> onActionReceivedMethodImpl(ReceivedAction receivedAction) async {
+    if (receivedAction.payload == null || receivedAction.payload!.isEmpty) {
+      return;
+    }
+    _handleAppLinkOrDeepLink(receivedAction.payload!);
+  }
+
+  static void _handleAppLinkOrDeepLink(Map<String, dynamic> payload) async {
+    // Always ensure that all plugins was initialized
+    // TODO: for what?
+    WidgetsFlutterBinding.ensureInitialized();
+
+    String? navigateTo;
+    if (payload.containsKey('navigate_to')) {
+      navigateTo = payload['navigate_to'];
+    }
+    if (navigateTo == null) {
+      debugPrint("Navigate To is null");
+      return;
+    }
+
+    MyApp.navigatorKey.currentState
+        ?.pushReplacement(MaterialPageRoute(builder: (context) => HomePageWrapper(navigateToRoute: navigateTo)));
+  }
+}
