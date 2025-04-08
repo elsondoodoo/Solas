@@ -17,6 +17,8 @@ from typing import Tuple
 from dotenv import load_dotenv
 import os
 
+load_dotenv()
+
 game_api_key = os.environ.get("GAME_SDK_API")
 
 def get_worker_state_fn(function_result: FunctionResult, current_state: dict) -> dict:
