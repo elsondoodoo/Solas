@@ -45,6 +45,7 @@ def stream_music_by_artist(artist: str) -> Tuple[str, str, dict[str, Any]]:
     This function uses Spotify's API to search for the artist, retrieves the top track,
     and returns the preview URL (if available) as a simulation of streaming.
     """
+    
     # Retrieve Spotify API credentials from environment variables
 
     if not client_id or not client_secret:
