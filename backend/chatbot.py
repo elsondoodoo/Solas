@@ -38,7 +38,7 @@ def tell_joke(prompt: str) -> Tuple[FunctionResultStatus, str, dict[str, Any]]:
         selected_joke = random.choice(jokes_bank)
         return FunctionResultStatus.DONE, f"It doesn't seem like you're feeling sad, but here's a joke anyway: {selected_joke}", {}
 
-def stream_music_by_artist(artist: str) -> Tuple[FunctionResultStatus, str, dict[str, Any]]:
+def stream_music_by_artist(artist: str) -> Tuple[str, str, dict[str, Any]]:
     """
     Streams a music preview from Spotify by searching for the given artist.
     
@@ -118,7 +118,7 @@ action_space = [
     Function(
         fn_name="stream_music_by_artist",
         fn_description="Play Songs by Artist",
-        args=[Argument(name="prompt", description="The prompt for the artist")],
+        args=[Argument(name="artist", description="The prompt for the artist")],
         executable=stream_music_by_artist,
     ),
         Function(
