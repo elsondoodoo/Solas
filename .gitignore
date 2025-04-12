@@ -22,3 +22,8 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Build cache
+**/*.pack
+**/*.pack.gz
+**/*.pack.old
