@@ -5,6 +5,8 @@
 *.pyc
 *__pycache__
 *.json
+!package.json
+!package-lock.json
 
 *.DS_Store
 dist/
@@ -111,3 +113,13 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+# Large binary files exceeding GitHub limits
+Frontend/Archive.zip
+Frontend/node_modules/.cache/default-development/0.pack
+Frontend/node_modules/.cache/default-development/1.pack
+Frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node
+
+# Add these to avoid future issues
+**/node_modules/**
+**/.cache/**
