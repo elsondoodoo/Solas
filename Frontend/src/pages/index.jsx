@@ -29,7 +29,7 @@ export default function Home() {
   const [emergencyContacts] = useState([
     { name: 'Crisis Lifeline', number: '988', description: '24/7 Crisis Support', facetime: null, emoji: '🆘' },
     { name: 'Kelly', number: 'kellyzhiying@hotmail.com', description: 'Available 24/7', facetime: 'kellyzhiying@hotmail.com', emoji: '👩‍⚕️' },
-    { name: 'Best Friend', number: '(555) 987-6543', description: 'Available evenings', facetime: null, emoji: '🤗' },
+    { name: 'Best Friend', number: '+17785808718', description: 'Available evenings', facetime: '+17785808718', emoji: '🤗' },
     { name: 'Therapist', number: '(555) 234-5678', description: 'Available Mon-Fri', facetime: null, emoji: '🧠' }
   ]);
 
@@ -77,6 +77,17 @@ export default function Home() {
   const [likedSongs, setLikedSongs] = useState([]);
   const [isSpotifyMode, setIsSpotifyMode] = useState(false);
   const [spotifyError, setSpotifyError] = useState(null);
+
+  // Add this to your state variables
+  const [autoQueueMessage, setAutoQueueMessage] = useState('');
+
+  // Add these to your state variables
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    name: '',
+    avatar: 'https://i.imgur.com/6VBx3io.png'
+  });
 
   // Update Spotify authentication effect
   useEffect(() => {
@@ -273,6 +284,18 @@ export default function Home() {
     const emergencyWords = ['suicide', 'kill myself', 'end it all', 'give up', "can't take it", 'depression', 'depressed'];
     const hasEmergencyWords = emergencyWords.some(word => text.toLowerCase().includes(word));
     
+    // Check for mood-related words and suggest music
+    if (text.toLowerCase().includes('breakup')) {
+      setAutoQueueMessage("I noticed you mentioned a breakup. Let me play 'Safe With Me' to help comfort you.");
+      setTimeout(() => {
+        setCurrentTrack(playlist[0]);
+        if (widgetRef.current) {
+          widgetRef.current.play();
+          setIsPlaying(true);
+        }
+      }, 1000);
+    }
+    
     if (hasEmergencyWords) {
       setIsEmergencyContactsVisible(true);
       setAgentMessage("I'm very concerned about what you're saying. Please know that you're not alone. Here are some people who care about you and are ready to help. Would you like to reach out to someone?");
@@ -301,708 +324,928 @@ export default function Home() {
   };
 
   return (
-    <main style={{
-      width: '100vw',
-      height: '100vh',
-      position: 'relative',
-      overflow: 'hidden',
-      backgroundImage: 'url(https://i.imgur.com/qmi9Jcw.png)',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }}>
-      {/* Header with logo */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        left: '20px',
-        zIndex: 2
-      }}>
-        <img 
-          src="https://i.imgur.com/gmHTE3o.png" 
-          alt="Solace Logo" 
-          style={{ 
-            height: '50px',
-            objectFit: 'contain',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease'
-          }}
-          onClick={() => window.location.href = '/'}
-        />
-      </div>
-
-      <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
-        <Spline
-          scene="https://prod.spline.design/GaMQ4Yii7PdYXTAq/scene.splinecode"
-          onMouseDown={(e) => {
-            if (e.target.name === 'Agent') {
-              setIsAgentSpeaking(true);
-              setAgentMessage("Hi there! I'm here to help you track your moods and find the perfect music for your emotions. How are you feeling today?");
-              setTimeout(() => setIsAgentSpeaking(false), 5000);
-            }
-          }}
-        />
-      </div>
-
-      {/* Mood Tracker */}
-      <div style={{
-        position: 'fixed',
-        top: '20px',
-        right: '40px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '20px',
-        borderRadius: '15px',
-        width: '300px',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-        zIndex: 1000
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>Mood Tracker</h2>
-          <button
-            onClick={() => setIsMoodPickerOpen(!isMoodPickerOpen)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#4a7c59',
-              fontSize: '24px',
-              cursor: 'pointer'
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
+      {/* Sidebar */}
+      <div 
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          height: '100vh',
+          width: isSidebarExpanded ? '200px' : '150px',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+          transition: 'width 0.3s ease',
+          zIndex: 1000,
+          padding: '15px 0',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        onMouseEnter={() => setIsSidebarExpanded(true)}
+        onMouseLeave={() => setIsSidebarExpanded(false)}
+      >
+        {/* Logo */}
+        <div style={{
+          padding: '0 15px',
+          marginBottom: '30px'
+        }}>
+          <img 
+            src="https://i.imgur.com/gmHTE3o.png" 
+            alt="Solace Logo" 
+            style={{ 
+              height: '35px',
+              opacity: isSidebarExpanded ? 1 : 0.8,
+              transition: 'opacity 0.3s ease'
             }}
-          >
-            {isMoodPickerOpen ? '✕' : '🎨'}
-          </button>
+          />
         </div>
 
+        {/* Navigation Items */}
+        <div style={{ flex: 1 }}>
+          <NavItem icon="🏠" label="Home" isExpanded={isSidebarExpanded} isActive={true} />
+          <NavItem icon="👤" label="User Information" isExpanded={isSidebarExpanded} />
+          <NavItem icon="🎨" label="Mood Marketplace" isExpanded={isSidebarExpanded} />
+          <NavItem icon="💎" label="My NFT Collection" isExpanded={isSidebarExpanded} />
+        </div>
+
+        {/* User Profile */}
         <div style={{
+          padding: '20px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '20px'
+          alignItems: 'center',
+          gap: '12px'
         }}>
-          {Object.entries(weekMoods).map(([day, mood]) => (
-            <div
-              key={day}
-              onDrop={(e) => handleDrop(e, day)}
-              onDragOver={handleDragOver}
+          {isLoggedIn ? (
+            <>
+              <img 
+                src={userProfile.avatar} 
+                alt="Profile" 
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '2px solid rgba(255, 255, 255, 0.2)'
+                }}
+              />
+              {isSidebarExpanded && (
+                <div style={{ color: 'white' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '500' }}>{userProfile.name}</div>
+                  <button 
+                    onClick={() => setIsLoggedIn(false)}
+                    style={{
+                      fontSize: '12px',
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => setIsLoggedIn(true)}
               style={{
-                width: '35px',
-                height: '35px',
-                borderRadius: '50%',
-                background: mood ? 'rgba(74, 124, 89, 0.1)' : '#f5f5f5',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: '100%',
+                padding: '10px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px',
+                color: 'white',
                 fontSize: '14px',
-                color: '#333',
-                transition: 'all 0.3s ease'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: isSidebarExpanded ? 'center' : 'center',
+                gap: '8px'
               }}
             >
-              <div style={{ fontSize: '12px', marginBottom: '2px' }}>{day}</div>
-              <div style={{ fontSize: '16px' }}>{mood}</div>
-            </div>
-          ))}
+              {!isSidebarExpanded ? '👤' : 'Connect Wallet'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ 
+        marginLeft: isSidebarExpanded ? '200px' : '150px',
+        transition: 'margin-left 0.3s ease',
+        position: 'relative',
+        minHeight: '100vh'
+      }}>
+        <div className="fixed inset-0" style={{ 
+          width: `calc(100vw - ${isSidebarExpanded ? '200px' : '150px'})`, 
+          height: '100vh',
+          marginLeft: isSidebarExpanded ? '200px' : '150px',
+          transition: 'all 0.3s ease'
+        }}>
+          <Spline
+            scene="https://prod.spline.design/SAAtNbKSixMJ80Xm/scene.splinecode"
+            onMouseDown={(e) => {
+              if (e.target.name === 'Agent') {
+                setIsAgentSpeaking(true);
+                setAgentMessage("Hi there! I'm here to help you track your moods and find the perfect music for your emotions. How are you feeling today?");
+                setTimeout(() => setIsAgentSpeaking(false), 5000);
+              }
+            }}
+            style={{ width: '100%', height: '100%' }}
+          />
         </div>
 
-        {isMoodPickerOpen && (
+        {/* Header with logo */}
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          zIndex: 1000
+        }}>
+          <img 
+            src="https://i.imgur.com/gmHTE3o.png" 
+            alt="Solace Logo" 
+            style={{ height: '40px' }}
+          />
+        </div>
+
+        {/* Mood Tracker */}
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '40px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          padding: '20px',
+          borderRadius: '15px',
+          width: '300px',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+          zIndex: 1001,
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>Mood Tracker</h2>
+            <button
+              onClick={() => setIsMoodPickerOpen(!isMoodPickerOpen)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#4a7c59',
+                fontSize: '24px',
+                cursor: 'pointer'
+              }}
+            >
+              {isMoodPickerOpen ? '✕' : '🎨'}
+            </button>
+          </div>
+
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px',
-            padding: '15px',
-            background: '#f5f5f5',
-            borderRadius: '10px'
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '20px'
           }}>
-            {Object.entries(moods).map(([emoji, mood]) => (
+            {Object.entries(weekMoods).map(([day, mood]) => (
               <div
-                key={emoji}
-                draggable
-                onDragStart={(e) => handleDragStart(e, emoji)}
+                key={day}
+                onDrop={(e) => handleDrop(e, day)}
+                onDragOver={handleDragOver}
                 style={{
-                  fontSize: '24px',
-                  cursor: 'grab',
-                  textAlign: 'center',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  transition: 'transform 0.2s ease',
-                  ':hover': {
-                    transform: 'scale(1.1)'
-                  }
+                  width: '35px',
+                  height: '35px',
+                  borderRadius: '50%',
+                  background: mood ? 'rgba(74, 124, 89, 0.1)' : '#f5f5f5',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  color: '#333',
+                  transition: 'all 0.3s ease'
                 }}
               >
-                {emoji}
+                <div style={{ fontSize: '12px', marginBottom: '2px' }}>{day}</div>
+                <div style={{ fontSize: '16px' }}>{mood}</div>
               </div>
             ))}
           </div>
-        )}
 
-        <div style={{ marginTop: '20px' }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333' }}>Today's Journal</h3>
-          <textarea
-            placeholder="How are you feeling today?"
-            value={currentJournal}
-            onChange={handleJournalChange}
-            style={{
-              width: '100%',
-              height: '100px',
-              padding: '12px',
-              borderRadius: '10px',
-              border: '1px solid #ddd',
-              resize: 'none',
-              fontSize: '14px',
-              marginBottom: '15px'
-            }}
-          />
-          
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-            <div 
-              onClick={() => document.getElementById('imageUpload').click()}
-              style={{
-                width: '120px',
-                background: '#fff',
-                padding: '10px 10px 30px 10px',
-                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                transform: 'rotate(-3deg)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease',
-                ':hover': {
-                  transform: 'rotate(-3deg) scale(1.02)'
-                }
-              }}
-            >
-              <div style={{
-                width: '100px',
-                height: '100px',
-                background: selectedImage ? `url(${selectedImage})` : '#f5f5f5',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '10px'
-              }}>
-                {!selectedImage && (
-                  <div style={{
-                    color: '#999',
-                    fontSize: '24px'
-                  }}>+</div>
-                )}
-              </div>
-              <div style={{
-                fontSize: '12px',
-                color: '#666',
-                textAlign: 'center',
-                fontStyle: 'italic'
-              }}>
-                Add a happy moment
-              </div>
+          {isMoodPickerOpen && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '10px',
+              padding: '15px',
+              background: '#f5f5f5',
+              borderRadius: '10px'
+            }}>
+              {Object.entries(moods).map(([emoji, mood]) => (
+                <div
+                  key={emoji}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, emoji)}
+                  style={{
+                    fontSize: '24px',
+                    cursor: 'grab',
+                    textAlign: 'center',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    transition: 'transform 0.2s ease',
+                    ':hover': {
+                      transform: 'scale(1.1)'
+                    }
+                  }}
+                >
+                  {emoji}
+                </div>
+              ))}
             </div>
-            <input
-              type="file"
-              id="imageUpload"
-              accept="image/*"
-              onChange={handleImageUpload}
-              style={{ display: 'none' }}
+          )}
+
+          <div style={{ marginTop: '20px' }}>
+            <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#333' }}>Today's Journal</h3>
+            <textarea
+              placeholder="How are you feeling today?"
+              value={currentJournal}
+              onChange={handleJournalChange}
+              style={{
+                width: '100%',
+                height: '100px',
+                padding: '12px',
+                borderRadius: '10px',
+                border: '1px solid #ddd',
+                resize: 'none',
+                fontSize: '14px',
+                marginBottom: '15px'
+              }}
             />
-            <div style={{ flex: 1, marginTop: '20px' }}>
-              <button
+            
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+              <div 
+                onClick={() => document.getElementById('imageUpload').click()}
                 style={{
-                  background: '#4a7c59',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '12px 24px',
-                  fontSize: '14px',
+                  width: '120px',
+                  background: '#fff',
+                  padding: '10px 10px 30px 10px',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  transform: 'rotate(-3deg)',
                   cursor: 'pointer',
-                  width: '100%',
-                  fontWeight: '500',
-                  boxShadow: '0 2px 8px rgba(74, 124, 89, 0.2)',
-                  transition: 'all 0.2s ease',
+                  transition: 'transform 0.2s ease',
                   ':hover': {
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 12px rgba(74, 124, 89, 0.3)'
+                    transform: 'rotate(-3deg) scale(1.02)'
                   }
                 }}
               >
-                Save Entry
-              </button>
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  background: selectedImage ? `url(${selectedImage})` : '#f5f5f5',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '10px'
+                }}>
+                  {!selectedImage && (
+                    <div style={{
+                      color: '#999',
+                      fontSize: '24px'
+                    }}>+</div>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#666',
+                  textAlign: 'center',
+                  fontStyle: 'italic'
+                }}>
+                  Add a happy moment
+                </div>
+              </div>
+              <input
+                type="file"
+                id="imageUpload"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+              />
+              <div style={{ flex: 1, marginTop: '20px' }}>
+                <button
+                  style={{
+                    background: '#4a7c59',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    width: '100%',
+                    fontWeight: '500',
+                    boxShadow: '0 2px 8px rgba(74, 124, 89, 0.2)',
+                    transition: 'all 0.2s ease',
+                    ':hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(74, 124, 89, 0.3)'
+                    }
+                  }}
+                >
+                  Save Entry
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Agent Message */}
-      {isAgentSpeaking && (
+        {/* Agent Message */}
+        {isAgentSpeaking && (
+          <div style={{
+            position: 'fixed',
+            left: '50%',
+            top: '30%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            padding: '15px 20px',
+            borderRadius: '20px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            maxWidth: '300px',
+            zIndex: 1002,
+            color: '#333',
+            fontSize: '14px',
+            lineHeight: '1.4',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
+          }}>
+            {agentMessage}
+          </div>
+        )}
+
+        {/* Music Player */}
         <div style={{
           position: 'fixed',
-          left: '50%',
-          top: '30%',
-          transform: 'translateX(-50%)',
+          bottom: '40px',
+          right: '40px',
           background: 'rgba(255, 255, 255, 0.95)',
-          padding: '15px 20px',
-          borderRadius: '20px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          maxWidth: '300px',
-          zIndex: 10,
-          color: '#333',
-          fontSize: '14px',
-          lineHeight: '1.4'
+          padding: '20px',
+          borderRadius: '15px',
+          width: '300px',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+          zIndex: 1001,
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)'
         }}>
-          {agentMessage}
-        </div>
-      )}
+          {/* Auto-Queue Message */}
+          {autoQueueMessage && (
+            <div style={{
+              background: 'rgba(74, 124, 89, 0.1)',
+              padding: '10px',
+              borderRadius: '8px',
+              marginBottom: '15px',
+              fontSize: '13px',
+              color: '#4a7c59',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span style={{ fontSize: '16px' }}>🎵</span>
+              {autoQueueMessage}
+            </div>
+          )}
 
-      {/* Modified Music Player */}
-      <div style={{
-        position: 'fixed',
-        bottom: '40px',
-        right: '40px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '20px',
-        borderRadius: '15px',
-        width: '300px',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-        zIndex: 900
-      }}>
-        {!spotifyToken ? (
-          <div style={{ textAlign: 'center' }}>
-            {spotifyError && (
-              <div style={{
-                color: '#e55',
-                fontSize: '12px',
-                marginBottom: '10px'
-              }}>
-                {spotifyError === 'invalid_client' ? 
-                  'Please set up Spotify Client ID in the code' : 
-                  `Error connecting to Spotify: ${spotifyError}`}
-              </div>
-            )}
-            <button
-              onClick={() => {
-                if (SPOTIFY_CLIENT_ID === 'YOUR_SPOTIFY_CLIENT_ID') {
-                  setSpotifyError('Please set up Spotify Client ID first');
-                  return;
-                }
-                window.location.href = SPOTIFY_AUTH_URL;
-              }}
-              style={{
-                background: '#1DB954',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '10px 20px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                width: '100%',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/2048px-Spotify_logo_without_text.svg.png" 
-                alt="Spotify"
-                style={{ width: '20px', height: '20px' }}
-              />
-              Connect Spotify
-            </button>
-          </div>
-        ) : (
-          <>
+          {/* Solace Player */}
+          <div style={{ marginBottom: '20px' }}>
             <div style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '15px'
+              alignItems: 'center', 
+              gap: '15px',
+              marginBottom: '15px' 
             }}>
-              <div style={{ 
-                display: 'flex', 
-                gap: '10px'
-              }}>
-                <button
-                  onClick={() => setIsSpotifyMode(false)}
-                  style={{
-                    background: !isSpotifyMode ? '#4a7c59' : 'transparent',
-                    color: !isSpotifyMode ? 'white' : '#666',
-                    border: '1px solid #4a7c59',
-                    borderRadius: '15px',
-                    padding: '5px 10px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Solace
-                </button>
-                <button
-                  onClick={() => setIsSpotifyMode(true)}
-                  style={{
-                    background: isSpotifyMode ? '#1DB954' : 'transparent',
-                    color: isSpotifyMode ? 'white' : '#666',
-                    border: '1px solid #1DB954',
-                    borderRadius: '15px',
-                    padding: '5px 10px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Spotify
-                </button>
-              </div>
-            </div>
-
-            {isSpotifyMode ? (
-              <div>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '15px',
-                  marginBottom: '15px'
-                }}>
-                  <img 
-                    src={currentTrack.artwork} 
-                    alt="Album Art" 
-                    style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '10px',
-                      objectFit: 'cover'
-                    }} 
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ 
-                      fontSize: '16px', 
-                      fontWeight: 'bold', 
-                      color: '#333',
-                      marginBottom: '4px'
-                    }}>
-                      {currentTrack.title}
-                    </div>
-                    <div style={{ 
-                      fontSize: '14px', 
-                      color: '#666' 
-                    }}>
-                      {currentTrack.artist}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ 
-                  maxHeight: '200px', 
-                  overflowY: 'auto',
-                  marginTop: '10px',
-                  padding: '5px'
-                }}>
-                  {likedSongs.map((song, index) => (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        if (spotifyPlayer) {
-                          spotifyPlayer.play({ uris: [song.uri] });
-                          setCurrentTrack(song);
-                        }
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        ':hover': {
-                          background: 'rgba(74, 124, 89, 0.1)'
-                        }
-                      }}
-                    >
-                      <img 
-                        src={song.artwork} 
-                        alt={song.title}
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '6px'
-                        }}
-                      />
-                      <div>
-                        <div style={{ 
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#333'
-                        }}>
-                          {song.title}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px',
-                          color: '#666'
-                        }}>
-                          {song.artist}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              // Original Solace player content
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <img src={currentTrack.artwork} alt="Album Art" style={{
+              <img 
+                src={currentTrack.artwork} 
+                alt="Album Art" 
+                style={{
                   width: '60px',
                   height: '60px',
                   borderRadius: '10px',
                   objectFit: 'cover'
-                }} />
-                <div>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>{currentTrack.title}</div>
-                  <div style={{ fontSize: '14px', color: '#666' }}>{currentTrack.artist}</div>
+                }} 
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: 'bold', 
+                  color: '#333',
+                  marginBottom: '4px'
+                }}>
+                  {currentTrack.title}
                 </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-                  <button onClick={togglePlay} style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#4a7c59',
-                    cursor: 'pointer',
-                    fontSize: '24px'
-                  }}>
-                    {isPlaying ? '⏸️' : '▶️'}
-                  </button>
-                  <button onClick={playNext} style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#4a7c59',
-                    cursor: 'pointer',
-                    fontSize: '24px'
-                  }}>
-                    ⏭️
-                  </button>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#666' 
+                }}>
+                  {currentTrack.artist}
                 </div>
               </div>
-            )}
-          </>
-        )}
-
-        {!isSpotifyMode && (
-          <iframe
-            ref={iframeRef}
-            width="100%"
-            height="166"
-            scrolling="no"
-            frameBorder="no"
-            allow="autoplay"
-            src={currentTrack.soundCloudUrl}
-            style={{ display: 'none' }}
-          />
-        )}
-      </div>
-
-      {/* Emergency Contacts */}
-      {isEmergencyContactsVisible && (
-        <div style={{
-          position: 'fixed',
-          top: '100px',
-          left: '40px',
-          background: 'rgba(255, 255, 255, 0.98)',
-          padding: '25px',
-          borderRadius: '15px',
-          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.15)',
-          width: '320px',
-          zIndex: 1000,
-          animation: 'slideIn 0.3s ease-out'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{ 
-              margin: 0,
-              color: '#333',
-              fontSize: '18px'
-            }}>
-              Here for You
-            </h3>
-            <button
-              onClick={() => setIsEmergencyContactsVisible(false)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#666',
-                fontSize: '20px',
-                cursor: 'pointer',
-                padding: '5px'
-              }}
-            >
-              ✕
-            </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={togglePlay} style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4a7c59',
+                  cursor: 'pointer',
+                  fontSize: '24px'
+                }}>
+                  {isPlaying ? '⏸️' : '▶️'}
+                </button>
+              </div>
+            </div>
           </div>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-          }}>
-            {emergencyContacts.map((contact, index) => (
-              <div
-                key={index}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  background: 'rgba(74, 124, 89, 0.05)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(74, 124, 89, 0.1)',
-                }}
-              >
+
+          {/* Spotify Integration */}
+          {!spotifyToken ? (
+            <div style={{ textAlign: 'center' }}>
+              {spotifyError && (
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #4a7c59 0%, #5b9c6f 100%)',
+                  color: '#e55',
+                  fontSize: '12px',
+                  marginBottom: '10px'
+                }}>
+                  {spotifyError === 'invalid_client' ? 
+                    'Please set up Spotify Client ID in the code' : 
+                    `Error connecting to Spotify: ${spotifyError}`}
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  if (SPOTIFY_CLIENT_ID === 'YOUR_SPOTIFY_CLIENT_ID') {
+                    setSpotifyError('Please set up Spotify Client ID first');
+                    return;
+                  }
+                  window.location.href = SPOTIFY_AUTH_URL;
+                }}
+                style={{
+                  background: '#1DB954',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '20px',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 8px rgba(74, 124, 89, 0.2)',
+                  gap: '8px',
+                  width: '100%',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <img 
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/2048px-Spotify_logo_without_text.svg.png" 
+                  alt="Spotify"
+                  style={{ width: '20px', height: '20px' }}
+                />
+                Connect Spotify
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '15px'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '10px'
                 }}>
-                  {contact.emoji}
+                  <button
+                    onClick={() => {
+                      setIsSpotifyMode(false);
+                      if (widgetRef.current) {
+                        widgetRef.current.pause();
+                      }
+                    }}
+                    style={{
+                      background: !isSpotifyMode ? '#4a7c59' : 'transparent',
+                      color: !isSpotifyMode ? 'white' : '#666',
+                      border: '1px solid #4a7c59',
+                      borderRadius: '15px',
+                      padding: '5px 10px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Solace
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsSpotifyMode(true);
+                      if (widgetRef.current) {
+                        widgetRef.current.pause();
+                      }
+                    }}
+                    style={{
+                      background: isSpotifyMode ? '#1DB954' : 'transparent',
+                      color: isSpotifyMode ? 'white' : '#666',
+                      border: '1px solid #1DB954',
+                      borderRadius: '15px',
+                      padding: '5px 10px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Spotify
+                  </button>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontWeight: '500',
-                    color: '#333',
-                    marginBottom: '2px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+              </div>
+
+              {isSpotifyMode ? (
+                <div>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '15px',
+                    marginBottom: '15px'
                   }}>
-                    {contact.name}
+                    <img 
+                      src={currentTrack.artwork} 
+                      alt="Album Art" 
+                      style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '10px',
+                        objectFit: 'cover'
+                      }} 
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ 
+                        fontSize: '16px', 
+                        fontWeight: 'bold', 
+                        color: '#333',
+                        marginBottom: '4px'
+                      }}>
+                        {currentTrack.title}
+                      </div>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        color: '#666' 
+                      }}>
+                        {currentTrack.artist}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#666',
+
+                  <div style={{ 
+                    maxHeight: '200px', 
+                    overflowY: 'auto',
+                    marginTop: '10px',
+                    padding: '5px'
+                  }}>
+                    {likedSongs.map((song, index) => (
+                      <div
+                        key={index}
+                        onClick={() => {
+                          if (spotifyPlayer) {
+                            spotifyPlayer.play({ uris: [song.uri] });
+                            setCurrentTrack(song);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          ':hover': {
+                            background: 'rgba(74, 124, 89, 0.1)'
+                          }
+                        }}
+                      >
+                        <img 
+                          src={song.artwork} 
+                          alt={song.title}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '6px'
+                          }}
+                        />
+                        <div>
+                          <div style={{ 
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#333'
+                          }}>
+                            {song.title}
+                          </div>
+                          <div style={{ 
+                            fontSize: '12px',
+                            color: '#666'
+                          }}>
+                            {song.artist}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // Original Solace player content
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <img src={currentTrack.artwork} alt="Album Art" style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '10px',
+                    objectFit: 'cover'
+                  }} />
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>{currentTrack.title}</div>
+                    <div style={{ fontSize: '14px', color: '#666' }}>{currentTrack.artist}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                    <button onClick={togglePlay} style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#4a7c59',
+                      cursor: 'pointer',
+                      fontSize: '24px'
+                    }}>
+                      {isPlaying ? '⏸️' : '▶️'}
+                    </button>
+                    <button onClick={playNext} style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#4a7c59',
+                      cursor: 'pointer',
+                      fontSize: '24px'
+                    }}>
+                      ⏭️
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!isSpotifyMode && (
+            <iframe
+              ref={iframeRef}
+              width="100%"
+              height="0"
+              scrolling="no"
+              frameBorder="no"
+              allow="autoplay"
+              src={currentTrack.soundCloudUrl}
+              style={{ visibility: 'hidden' }}
+            />
+          )}
+        </div>
+
+        {/* Emergency Contacts */}
+        {isEmergencyContactsVisible && (
+          <div style={{
+            position: 'fixed',
+            top: '100px',
+            left: '40px',
+            background: 'rgba(255, 255, 255, 0.98)',
+            padding: '25px',
+            borderRadius: '15px',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.15)',
+            width: '320px',
+            zIndex: 1000,
+            animation: 'slideIn 0.3s ease-out'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ 
+                margin: 0,
+                color: '#333',
+                fontSize: '18px'
+              }}>
+                Here for You
+              </h3>
+              <button
+                onClick={() => setIsEmergencyContactsVisible(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#666',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  padding: '5px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              {emergencyContacts.map((contact, index) => (
+                <div
+                  key={index}
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    gap: '12px',
+                    padding: '12px',
+                    background: 'rgba(74, 124, 89, 0.05)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(74, 124, 89, 0.1)',
+                  }}
+                >
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #4a7c59 0%, #5b9c6f 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '20px',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(74, 124, 89, 0.2)',
                   }}>
-                    <span style={{ color: '#4a7c59', fontWeight: '500' }}>{contact.number}</span>
-                    <span style={{ color: '#999' }}>•</span>
-                    <span>{contact.description}</span>
+                    {contact.emoji}
                   </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: '500',
+                      color: '#333',
+                      marginBottom: '2px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {contact.name}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#666',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      <span style={{ color: '#4a7c59', fontWeight: '500' }}>{contact.number}</span>
+                      <span style={{ color: '#999' }}>•</span>
+                      <span>{contact.description}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleEmergencyCall(contact)}
+                    style={{
+                      background: '#4a7c59',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      ':hover': {
+                        background: '#3a6249'
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: '16px' }}>📱</span>
+                    Call
+                  </button>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Dialog */}
+        {showConfirmation && selectedContact && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000
+          }}>
+            <div style={{
+              background: 'white',
+              padding: '25px',
+              borderRadius: '15px',
+              width: '90%',
+              maxWidth: '400px',
+              textAlign: 'center'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 15px 0',
+                color: '#333',
+                fontSize: '18px'
+              }}>
+                Start FaceTime Audio Call?
+              </h4>
+              <p style={{
+                margin: '0 0 20px 0',
+                color: '#666',
+                fontSize: '14px'
+              }}>
+                Would you like to call {selectedContact.name} via FaceTime Audio?
+              </p>
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'center'
+              }}>
                 <button
-                  onClick={() => handleEmergencyCall(contact)}
+                  onClick={() => setShowConfirmation(false)}
                   style={{
-                    background: '#4a7c59',
+                    padding: '10px 20px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    background: 'white',
+                    color: '#666',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    ':hover': {
+                      background: '#f5f5f5'
+                    }
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={initiateCall}
+                  style={{
+                    padding: '10px 20px',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '8px 12px',
+                    background: '#4a7c59',
                     color: 'white',
-                    fontSize: '14px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
+                    fontSize: '14px',
                     ':hover': {
                       background: '#3a6249'
                     }
                   }}
                 >
-                  <span style={{ fontSize: '16px' }}>📱</span>
-                  Call
+                  Call Now
                 </button>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Dialog */}
-      {showConfirmation && selectedContact && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '25px',
-            borderRadius: '15px',
-            width: '90%',
-            maxWidth: '400px',
-            textAlign: 'center'
-          }}>
-            <h4 style={{ 
-              margin: '0 0 15px 0',
-              color: '#333',
-              fontSize: '18px'
-            }}>
-              Start FaceTime Audio Call?
-            </h4>
-            <p style={{
-              margin: '0 0 20px 0',
-              color: '#666',
-              fontSize: '14px'
-            }}>
-              Would you like to call {selectedContact.name} via FaceTime Audio?
-            </p>
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              justifyContent: 'center'
-            }}>
-              <button
-                onClick={() => setShowConfirmation(false)}
-                style={{
-                  padding: '10px 20px',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  background: 'white',
-                  color: '#666',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  ':hover': {
-                    background: '#f5f5f5'
-                  }
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={initiateCall}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: '#4a7c59',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  ':hover': {
-                    background: '#3a6249'
-                  }
-                }}
-              >
-                Call Now
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </div>
+    </div>
   );
-} 
+}
+
+const NavItem = ({ icon, label, isExpanded, isActive }) => (
+  <div
+    style={{
+      padding: '10px 15px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      color: 'white',
+      opacity: isActive ? 1 : 0.6,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+      ':hover': {
+        opacity: 1,
+        background: 'rgba(255, 255, 255, 0.1)'
+      }
+    }}
+  >
+    <span style={{ fontSize: '18px' }}>{icon}</span>
+    <span style={{ 
+      fontSize: '13px',
+      whiteSpace: 'nowrap',
+      transition: 'opacity 0.2s ease'
+    }}>
+      {label}
+    </span>
+  </div>
+); 
