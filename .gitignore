@@ -92,6 +92,12 @@ dist/
 *.mov
 *.bin
 *.zip
+Frontend.zip
+Frontend/Archive.zip
+frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node
+frontend/node_modules/.cache/default-development/*.pack
+backend/omi/docs/static/images/updating_your_friend.mov
+backend/omi/sdks/swift/Sources/omi-lib/Resources/ggml-tiny.en.bin
 
 # IDE
 .idea/
