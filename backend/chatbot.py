@@ -174,6 +174,7 @@ agent = ChatAgent(
     api_key=api_key,
 )
 
+
 chat = agent.create_chat(
     partner_id="elson",
     partner_name="Elson",
