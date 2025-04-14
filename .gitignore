@@ -37,3 +37,18 @@ venv/
 venv/
 **/__pycache__/
 **/transcripts/
+
+# Large Python library files
+venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.dyli
+venv/lib/python3.12/site-packages/torch/lib/*.dylib
+venv/lib/python3.12/site-packages/torch/lib/*.so
+venv/lib/python3.12/site-packages/torch/lib/*.dll
+
+# Additional large library files
+venv/lib/python3.12/site-packages/llvmlite/binding/libllvmlite.dylib
+venv/lib/python3.12/site-packages/onnxruntime/capi/onnxruntime_pybind11_state.so
+
+# Broader patterns to catch other large libraries
+venv/lib/python3.12/site-packages/**/*.dylib
+venv/lib/python3.12/site-packages/**/*.so
+venv/lib/python3.12/site-packages/**/*.dll
