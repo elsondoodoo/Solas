@@ -2,7 +2,7 @@ import asyncio
 import os
 import sys
 from omi.bluetooth import listen_to_omi
-from omi.transcribe import transcribe, TRANSCRIPTS_DIR
+from omi.transcribe import transcribe, TRANSCRIPTS_DIR, TRANSCRIPT_FILE
 from omi.decoder import OmiOpusDecoder
 from asyncio import Queue
 
@@ -31,7 +31,7 @@ def main():
         print(f"Using default MAC address: {mac_address}")
         print("To use a different MAC address: python main.py API_KEY MAC_ADDRESS")
     
-    print(f"Transcripts will be saved to: {TRANSCRIPTS_DIR}")
+    print(f"Transcript will be saved to: {TRANSCRIPT_FILE}")
     print("Starting Omi listening service...")
     print("Press Ctrl+C to stop")
 

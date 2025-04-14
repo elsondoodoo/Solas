@@ -1,5 +1,0 @@
-[2025-04-13 23:53:58] Hello, this is a test of the transcription system.
-[2025-04-13 23:54:00] The transcript should be saved to files in real time.
-[2025-04-13 23:54:02] One file contains only the latest line.
-[2025-04-13 23:54:04] The other file contains the entire conversation history.
-[2025-04-13 23:54:06] This is the end of the test. Thank you!

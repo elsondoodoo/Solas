@@ -8,42 +8,39 @@ from datetime import datetime
 TRANSCRIPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "transcripts")
 os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
 
+# Single transcript file path
+TRANSCRIPT_FILE = os.path.join(TRANSCRIPTS_DIR, "transcript.txt")
+
 # File locks for concurrent access
 import threading
 file_lock = threading.Lock()
 
-def save_transcript_line(conversation_id, text):
-    """Save the latest transcript line to a file."""
+def clear_transcript_file():
+    """Clear the transcript file and add a header."""
     with file_lock:
-        # Create conversation directory if it doesn't exist
-        conversation_dir = os.path.join(TRANSCRIPTS_DIR, conversation_id)
-        os.makedirs(conversation_dir, exist_ok=True)
-        
-        # Path for the latest line file
-        latest_line_path = os.path.join(conversation_dir, "latest.txt")
-        
-        # Write the latest line to the file
-        with open(latest_line_path, "w") as f:
-            f.write(text)
-            
-        return latest_line_path
+        with open(TRANSCRIPT_FILE, "w") as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"# Transcript started at {timestamp}\n\n")
+        print(f"Cleared transcript file: {TRANSCRIPT_FILE}")
 
-def append_to_full_transcript(conversation_id, text):
-    """Append a new transcript line to the full transcript file."""
+def update_transcript(text):
+    """Update the transcript file with new text."""
     with file_lock:
-        # Create conversation directory if it doesn't exist
-        conversation_dir = os.path.join(TRANSCRIPTS_DIR, conversation_id)
-        os.makedirs(conversation_dir, exist_ok=True)
-        
-        # Path for the full transcript file
-        full_transcript_path = os.path.join(conversation_dir, "full.txt")
-        
-        # Append the line to the full transcript file
-        with open(full_transcript_path, "a") as f:
+        # Append the text to the transcript file
+        with open(TRANSCRIPT_FILE, "a") as f:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(f"[{timestamp}] {text}\n")
-            
-        return full_transcript_path
+        return TRANSCRIPT_FILE
+
+# For backward compatibility
+def save_transcript_line(conversation_id, text):
+    """Save transcript line (updated to use single file)."""
+    return update_transcript(text)
+
+# For backward compatibility
+def append_to_full_transcript(conversation_id, text):
+    """Append to transcript (updated to use single file)."""
+    return update_transcript(text)
 
 async def transcribe(audio_queue, api_key):
     url = "wss://api.deepgram.com/v1/listen?punctuate=true&model=nova&language=en-US&encoding=linear16&sample_rate=16000&channels=1"
@@ -51,10 +48,11 @@ async def transcribe(audio_queue, api_key):
         "Authorization": f"Token {api_key}"
     }
 
-    # Create a unique ID for this conversation
-    conversation_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    print(f"Starting new conversation with ID: {conversation_id}")
-    print(f"Transcripts will be saved to: {os.path.join(TRANSCRIPTS_DIR, conversation_id)}")
+    # Clear the transcript file at the start
+    clear_transcript_file()
+    
+    # Display info
+    print(f"Transcript will be saved to: {TRANSCRIPT_FILE}")
 
     while True:
         try:
@@ -86,9 +84,8 @@ async def transcribe(audio_queue, api_key):
                                         clean_transcript = transcript.strip()
                                         print("\nTranscript:", clean_transcript)
                                         
-                                        # Save transcript to files
-                                        save_transcript_line(conversation_id, clean_transcript)
-                                        append_to_full_transcript(conversation_id, clean_transcript)
+                                        # Save transcript to the single file
+                                        update_transcript(clean_transcript)
                             except json.JSONDecodeError as e:
                                 print(f"Error decoding response: {e}")
                             except Exception as e:
