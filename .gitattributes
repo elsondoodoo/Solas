@@ -5,3 +5,6 @@ Frontend/node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node filter=l
 *.bin filter=lfs diff=lfs merge=lfs -text
 *.node filter=lfs diff=lfs merge=lfs -text
 *.pack filter=lfs diff=lfs merge=lfs -text
+venv/lib/python3.12/site-packages/**/*.dll filter=lfs diff=lfs merge=lfs -text
+venv/lib/python3.12/site-packages/**/*.dylib filter=lfs diff=lfs merge=lfs -text
+venv/lib/python3.12/site-packages/**/*.so filter=lfs diff=lfs merge=lfs -text
