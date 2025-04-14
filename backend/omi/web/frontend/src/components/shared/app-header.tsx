@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -135,10 +134,7 @@ export default function AppHeader({
   const params = useParams();
   const pathname = usePathname();
 
-  // Don't render the header on the Dreamforce page
-  if (pathname.includes('dreamforce')) {
-    return null;
-  }
+  const dreamforcePage = pathname.includes('dreamforce');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -152,7 +148,7 @@ export default function AppHeader({
     };
   }, []);
 
-  return (
+  return !dreamforcePage ? (
     <>
       <header
         className={`fixed top-0 z-50 flex w-full items-center justify-between bg-[#0B0F17] p-4 px-4 text-white transition-all duration-500 md:px-12 ${
@@ -283,5 +279,5 @@ export default function AppHeader({
         </div>
       </div>
     </>
-  );
+  ) : null;
 }

@@ -7,8 +7,9 @@ export default function Home() {
   const [journalText, setJournalText] = useState('');
   const [showEmergencyContacts, setShowEmergencyContacts] = useState(false);
   const [showMusicPlayer, setShowMusicPlayer] = useState(false);
-  const [expandedMusicPlayer, setExpandedMusicPlayer] = useState(false);
-  const [textPosition, setTextPosition] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [songProgress, setSongProgress] = useState(0);
+  const [songDuration, setSongDuration] = useState(204); // 3:24 in seconds
   const [showEmojiSelector, setShowEmojiSelector] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('onboarding');
@@ -23,26 +24,14 @@ export default function Home() {
   // References to Spline
   const splineRef = useRef();
   
+  // Reference for the SoundCloud iframe
+  const soundCloudRef = useRef(null);
+  
   // Trigger words that will show emergency contacts
   const triggerWords = ['sad', 'depressed', 'depression', 'suicide', 'suicidal', 'kill myself', 'end my life', 'hopeless'];
   
   // Breakup related words
   const breakupWords = ['breakup', 'break up', 'broke up', 'breaking up', 'left me', 'ex', 'heartbreak', 'dumped'];
-  
-  // Animate the instruction text
-  useEffect(() => {
-    const animationInterval = setInterval(() => {
-      setTextPosition(prev => {
-        // Reset position when text moves completely off screen
-        if (prev < -100) {
-          return 100;
-        }
-        return prev - 0.1; // Move text by 0.1% each frame
-      });
-    }, 30);
-    
-    return () => clearInterval(animationInterval);
-  }, []);
   
   // Check journal text for trigger words
   useEffect(() => {
@@ -187,7 +176,7 @@ export default function Home() {
   
   // Contact component for emergency contacts
   const Contact = ({ icon, name, info, onCall }) => {
-    return (
+  return (
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -247,9 +236,60 @@ export default function Home() {
 
   const router = useRouter();
 
+  // Function to toggle play/pause
+  const togglePlayPause = () => {
+    if (soundCloudRef.current) {
+      if (isPlaying) {
+        soundCloudRef.current.contentWindow.postMessage(JSON.stringify({ method: 'pause' }), '*');
+      } else {
+        soundCloudRef.current.contentWindow.postMessage(JSON.stringify({ method: 'play' }), '*');
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+  
+  // Load SoundCloud Widget API and setup event listeners when the music player is shown
+  useEffect(() => {
+    if (showMusicPlayer) {
+      // Add SoundCloud Widget API script
+      const script = document.createElement('script');
+      script.src = 'https://w.soundcloud.com/player/api.js';
+      script.async = true;
+      document.body.appendChild(script);
+      
+      // Setup message listener for SoundCloud iframe events
+      const handleSoundCloudMessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.soundcloud) {
+            if (data.soundcloud.event === 'play') {
+              setIsPlaying(true);
+            } else if (data.soundcloud.event === 'pause') {
+              setIsPlaying(false);
+            } else if (data.soundcloud.event === 'playProgress') {
+              setSongProgress(Math.floor(data.soundcloud.currentPosition / 1000));
+            } else if (data.soundcloud.event === 'loadProgress') {
+              if (data.soundcloud.duration) {
+                setSongDuration(Math.floor(data.soundcloud.duration / 1000));
+              }
+            }
+          }
+        } catch (e) {
+          // Not a JSON message or not from SoundCloud
+        }
+      };
+      
+      window.addEventListener('message', handleSoundCloudMessage);
+      
+      return () => {
+        window.removeEventListener('message', handleSoundCloudMessage);
+      };
+    }
+  }, [showMusicPlayer]);
+
   return (
     <main style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-      <Spline
+        <Spline
         scene="https://prod.spline.design/SAAtNbKSixMJ80Xm/scene.splinecode"
         style={{ position: 'absolute', width: '100%', height: '100%' }}
         onLoad={onSplineLoad}
@@ -381,19 +421,21 @@ export default function Home() {
                 flexDirection: 'column',
                 gap: '10px'
               }}>
-                <button style={{
-                  background: '#5b7d61',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                <button 
+                  onClick={() => router.push('/onboarding/welcome')}
+                  style={{
+                    background: '#5b7d61',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                 >
                   Complete Your Profile
                 </button>
@@ -718,26 +760,24 @@ export default function Home() {
         `}</style>
       </div>
       
-      {/* Animated instruction text */}
+      {/* Instruction text */}
       <div style={{
         position: 'fixed',
-        bottom: 'calc(50% - 100px)',
+        bottom: '100px',
         width: '100%',
         textAlign: 'center',
         zIndex: 50,
-        overflow: 'hidden',
         pointerEvents: 'none'
       }}>
         <div style={{
-          color: 'white',
-          fontSize: '16px',
-          fontWeight: '400',
-          letterSpacing: '1.5px',
-          textTransform: 'lowercase',
-          whiteSpace: 'nowrap',
-          transform: `translateX(${textPosition}%)`,
-          opacity: 0.85,
-          textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(0,0,0,0.3)'
+          display: 'inline-block',
+          background: 'rgba(255, 255, 255, 0.8)',
+          padding: '10px 20px',
+          borderRadius: '20px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          color: '#666',
+          fontSize: '14px',
+          backdropFilter: 'blur(4px)'
         }}>
           please hold option to interact with solace
         </div>
@@ -822,141 +862,105 @@ export default function Home() {
           background: 'white',
           borderRadius: '16px',
           boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-          padding: expandedMusicPlayer ? '0' : '16px',
-          width: expandedMusicPlayer ? '450px' : '420px',
+          padding: '16px',
+          width: '420px',
           maxWidth: '95%',
           zIndex: 110,
           overflow: 'hidden'
         }}>
-          {expandedMusicPlayer ? (
-            <div>
-              <div style={{ position: 'relative' }}>
-                <iframe 
-                  width="100%" 
-                  height="116" 
-                  scrolling="no" 
-                  frameBorder="no" 
-                  allow="autoplay" 
-                  src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/931781749&color=%235b7d61&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&buying=false&sharing=false&download=false&show_playcount=false&show_artwork=false"
-                  style={{ display: 'block' }}
-                ></iframe>
-                <div style={{ 
-                  padding: '10px', 
-                  fontSize: '10px', 
-                  color: '#777',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  fontFamily: 'sans-serif',
-                  fontWeight: '400',
-                  textAlign: 'center'
-                }}>
-                  Safe With Me - Gryffin, Audrey Mika
-                </div>
-                <button 
-                  onClick={() => setExpandedMusicPlayer(false)}
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    background: 'rgba(0,0,0,0.5)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    zIndex: 10
-                  }}
-                >×</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div 
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '8px',
-                  backgroundImage: 'url("https://i.imgur.com/PzYsC9K.png")',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  flexShrink: 0,
-                  cursor: 'pointer'
-                }}
-                onClick={() => setExpandedMusicPlayer(true)}
-              ></div>
+          {/* Hidden SoundCloud iframe for audio playback */}
+          <iframe 
+            ref={soundCloudRef}
+            width="100%" 
+            height="0" 
+            scrolling="no" 
+            frameBorder="no" 
+            allow="autoplay" 
+            src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/931781749&color=%235b7d61&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&buying=false&sharing=false&download=false&show_playcount=false"
+            style={{ display: 'none' }}
+          ></iframe>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div 
+              style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '8px',
+                backgroundImage: 'url("https://i.imgur.com/PzYsC9K.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                flexShrink: 0
+              }}
+            ></div>
+            
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Safe With Me</div>
+              <div style={{ fontSize: '12px', color: '#777' }}>Gryffin, Audrey Mika</div>
               
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Safe With Me</div>
-                <div style={{ fontSize: '12px', color: '#777' }}>Gryffin, Audrey Mika</div>
-                
+              <div style={{ 
+                width: '100%', 
+                height: '4px', 
+                background: '#eee', 
+                borderRadius: '2px',
+                marginTop: '8px',
+                position: 'relative'
+              }}>
                 <div style={{ 
-                  width: '100%', 
-                  height: '4px', 
-                  background: '#eee', 
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  height: '100%',
+                  width: `${(songProgress / songDuration) * 100}%`,
+                  background: '#5b7d61',
                   borderRadius: '2px',
-                  marginTop: '8px',
-                  position: 'relative'
-                }}>
-                  <div style={{ 
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    height: '100%',
-                    width: '30%',
-                    background: '#5b7d61',
-                    borderRadius: '2px'
-                  }}></div>
-                </div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  fontSize: '10px', 
-                  color: '#999',
-                  marginTop: '4px'
-                }}>
-                  <span>00:14</span>
-                  <span>03:24</span>
-                </div>
+                  transition: 'width 0.5s'
+                }}></div>
               </div>
-              
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <button 
-                  onClick={() => setExpandedMusicPlayer(true)}
-                  style={{
-                    background: '#5b7d61',
-                    border: 'none',
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: 'white',
-                    fontSize: '16px'
-                  }}
-                >▶️</button>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                fontSize: '10px', 
+                color: '#999',
+                marginTop: '4px'
+              }}>
+                <span>{Math.floor(songProgress / 60)}:{String(songProgress % 60).padStart(2, '0')}</span>
+                <span>{Math.floor(songDuration / 60)}:{String(songDuration % 60).padStart(2, '0')}</span>
               </div>
-              
-              <button 
-                onClick={() => setShowMusicPlayer(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  color: '#999',
-                  padding: '5px'
-                }}
-              >×</button>
             </div>
-          )}
+            
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button 
+                onClick={togglePlayPause}
+                style={{
+                  background: '#5b7d61',
+                  border: 'none',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: '16px'
+                }}
+              >
+                {isPlaying ? '⏸️' : '▶️'}
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setShowMusicPlayer(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '18px',
+                cursor: 'pointer',
+                color: '#999',
+                padding: '5px'
+              }}
+            >×</button>
+          </div>
         </div>
       )}
       
@@ -1171,4 +1175,4 @@ export default function Home() {
       </div>
     </main>
   );
-}
+} 
