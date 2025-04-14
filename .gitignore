@@ -33,3 +33,4 @@ out/
 # Text files for chatbot
 user_input.txt
 bot_responses.txt
+venv/
