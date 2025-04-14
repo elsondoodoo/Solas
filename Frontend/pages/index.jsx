@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Spline from '@splinetool/react-spline';
+import { useRouter } from 'next/router';
 
 export default function Home() {
   const [agentMessage, setAgentMessage] = useState('');
@@ -244,6 +245,8 @@ export default function Home() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const router = useRouter();
+
   return (
     <main style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <Spline
@@ -404,6 +407,7 @@ export default function Home() {
                   fontSize: '14px',
                   transition: 'all 0.2s ease'
                 }}
+                onClick={() => router.push('/wellness-quiz')}
                 onMouseOver={(e) => e.currentTarget.style.background = 'rgba(91, 125, 97, 0.05)'}
                 onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                 >
