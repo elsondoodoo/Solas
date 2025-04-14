@@ -7,8 +7,10 @@ from enum import Enum
 
 import opuslib
 import webrtcvad
+import fastapi
 from fastapi import APIRouter, Depends
 from fastapi.websockets import WebSocketDisconnect, WebSocket
+from fastapi.responses import PlainTextResponse
 from pydub import AudioSegment
 from starlette.websockets import WebSocketState
 
@@ -29,6 +31,7 @@ from utils.stt.streaming import process_audio_soniox, process_audio_dg, process_
 from utils.webhooks import get_audio_bytes_webhook_seconds
 from utils.pusher import connect_to_trigger_pusher
 from utils.translation import translate_text, detect_language
+from utils.transcript_files import save_transcript
 
 
 from utils.other import endpoints as auth
@@ -613,6 +616,13 @@ async def _listen(
                 # Send to external trigger
                 if transcript_send is not None:
                     transcript_send(updates_segments,current_conversation_id)
+                
+                # Save transcript to files
+                for segment in transcript_segments:
+                    # Extract text from the segment
+                    segment_text = segment.text
+                    if segment_text and segment_text.strip():  # Only save non-empty segments
+                        await save_transcript(uid, current_conversation_id, segment_text)
 
                 # Translate
                 if translation_enabled:
@@ -760,3 +770,165 @@ async def listen_handler(
         channels: int = 1, include_speech_profile: bool = True, stt_service: STTService = None
 ):
     await _listen(websocket, uid, language, sample_rate, codec, channels, include_speech_profile, None, including_combined_segments=True)
+
+@router.get("/v1/transcript-files/{conversation_id}")
+async def get_transcript_files(conversation_id: str, uid: str = Depends(auth.get_current_user_uid)):
+    """
+    Returns the paths to the transcript files for a given conversation ID.
+    """
+    from utils.transcript_files import TRANSCRIPT_DIR
+    import os
+    
+    # Create paths to the transcript files
+    user_dir = os.path.join(TRANSCRIPT_DIR, uid)
+    
+    # Check if the directory exists
+    if not os.path.exists(user_dir):
+        return {"error": "No transcripts found for this user"}
+    
+    latest_line_path = os.path.join(user_dir, f"{conversation_id}_latest.txt")
+    full_transcript_path = os.path.join(user_dir, f"{conversation_id}_full.txt")
+    
+    # Check if the files exist
+    latest_exists = os.path.exists(latest_line_path)
+    full_exists = os.path.exists(full_transcript_path)
+    
+    return {
+        "conversation_id": conversation_id,
+        "latest_line": {
+            "exists": latest_exists,
+            "path": latest_line_path if latest_exists else None
+        },
+        "full_transcript": {
+            "exists": full_exists,
+            "path": full_transcript_path if full_exists else None
+        }
+    }
+
+@router.get("/v1/transcript-files/{conversation_id}/latest")
+async def get_latest_transcript_line(conversation_id: str, uid: str = Depends(auth.get_current_user_uid)):
+    """
+    Returns the content of the latest transcript line file.
+    """
+    from utils.transcript_files import TRANSCRIPT_DIR
+    import os
+    
+    # Create path to the latest line file
+    user_dir = os.path.join(TRANSCRIPT_DIR, uid)
+    latest_line_path = os.path.join(user_dir, f"{conversation_id}_latest.txt")
+    
+    # Check if the file exists
+    if not os.path.exists(latest_line_path):
+        return {"error": "Latest transcript line not found"}
+    
+    # Read the file content
+    with open(latest_line_path, "r") as f:
+        content = f.read()
+    
+    return {"conversation_id": conversation_id, "content": content}
+
+@router.get("/v1/transcript-files/{conversation_id}/full")
+async def get_full_transcript(conversation_id: str, uid: str = Depends(auth.get_current_user_uid)):
+    """
+    Returns the content of the full transcript file.
+    """
+    from utils.transcript_files import TRANSCRIPT_DIR
+    import os
+    
+    # Create path to the full transcript file
+    user_dir = os.path.join(TRANSCRIPT_DIR, uid)
+    full_transcript_path = os.path.join(user_dir, f"{conversation_id}_full.txt")
+    
+    # Check if the file exists
+    if not os.path.exists(full_transcript_path):
+        return {"error": "Full transcript not found"}
+    
+    # Read the file content
+    with open(full_transcript_path, "r") as f:
+        content = f.read()
+    
+    return {"conversation_id": conversation_id, "content": content}
+
+@router.get("/v1/transcript-files/{conversation_id}/latest/text", response_class=PlainTextResponse)
+async def get_latest_transcript_line_text(conversation_id: str, uid: str = Depends(auth.get_current_user_uid)):
+    """
+    Returns the content of the latest transcript line file as plain text.
+    """
+    from utils.transcript_files import TRANSCRIPT_DIR
+    import os
+    
+    # Create path to the latest line file
+    user_dir = os.path.join(TRANSCRIPT_DIR, uid)
+    latest_line_path = os.path.join(user_dir, f"{conversation_id}_latest.txt")
+    
+    # Check if the file exists
+    if not os.path.exists(latest_line_path):
+        return PlainTextResponse("Transcript not found", status_code=404)
+    
+    # Read the file content
+    with open(latest_line_path, "r") as f:
+        content = f.read()
+    
+    return PlainTextResponse(content)
+
+@router.get("/v1/transcript-files/{conversation_id}/full/text", response_class=PlainTextResponse)
+async def get_full_transcript_text(conversation_id: str, uid: str = Depends(auth.get_current_user_uid)):
+    """
+    Returns the content of the full transcript file as plain text.
+    """
+    from utils.transcript_files import TRANSCRIPT_DIR
+    import os
+    
+    # Create path to the full transcript file
+    user_dir = os.path.join(TRANSCRIPT_DIR, uid)
+    full_transcript_path = os.path.join(user_dir, f"{conversation_id}_full.txt")
+    
+    # Check if the file exists
+    if not os.path.exists(full_transcript_path):
+        return PlainTextResponse("Transcript not found", status_code=404)
+    
+    # Read the file content
+    with open(full_transcript_path, "r") as f:
+        content = f.read()
+    
+    return PlainTextResponse(content)
+
+@router.get("/v1/transcript-files")
+async def list_transcript_files(uid: str = Depends(auth.get_current_user_uid)):
+    """
+    Lists all available transcript files for a user.
+    """
+    from utils.transcript_files import TRANSCRIPT_DIR
+    import os
+    
+    # Create path to the user directory
+    user_dir = os.path.join(TRANSCRIPT_DIR, uid)
+    
+    # Check if the directory exists
+    if not os.path.exists(user_dir):
+        return {"transcripts": []}
+    
+    # Get all files in the directory
+    files = os.listdir(user_dir)
+    
+    # Group files by conversation ID
+    conversations = {}
+    for file in files:
+        if file.endswith("_latest.txt"):
+            conversation_id = file.replace("_latest.txt", "")
+            if conversation_id not in conversations:
+                conversations[conversation_id] = {"id": conversation_id, "files": []}
+            conversations[conversation_id]["files"].append({
+                "type": "latest_line", 
+                "path": os.path.join(user_dir, file)
+            })
+        elif file.endswith("_full.txt"):
+            conversation_id = file.replace("_full.txt", "")
+            if conversation_id not in conversations:
+                conversations[conversation_id] = {"id": conversation_id, "files": []}
+            conversations[conversation_id]["files"].append({
+                "type": "full_transcript", 
+                "path": os.path.join(user_dir, file)
+            })
+    
+    return {"transcripts": list(conversations.values())}
