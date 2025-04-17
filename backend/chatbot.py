@@ -47,7 +47,6 @@ def tell_joke(prompt: str) -> Tuple[FunctionResultStatus, str, dict[str, Any]]:
             {},
         )
 
-
 def stream_music_by_artist(artist: str) -> Tuple[str, str, dict[str, Any]]:
     """
     Streams a music preview from Spotify by searching for the given artist.
@@ -116,7 +115,6 @@ def stream_music_by_artist(artist: str) -> Tuple[str, str, dict[str, Any]]:
             f"Preview not available for '{track_name}' by {artist}.",
             {},
         )
-
 
 def check_crypto_price(currency: str):
     prices = {

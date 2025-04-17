@@ -7,7 +7,7 @@ from omi.decoder import OmiOpusDecoder
 from asyncio import Queue
 
 # Default Omi MAC address - you should replace this with your device's address
-OMI_MAC = "F6:84:2E:BE:91:41"
+OMI_MAC = "D4:5E:89:C0:DD:A8"
 OMI_CHAR_UUID = "0000180a-0000-1000-8000-00805f9b34fb"
 
 def main():
