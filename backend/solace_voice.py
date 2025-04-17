@@ -8,10 +8,13 @@ from openai.types.beta.realtime.session import TurnDetection
 
 load_dotenv()
 
+
 class Assistant(Agent):
     def __init__(self) -> None:
-        super().__init__(instructions="Your name Solas. You are an empathetic voice agent that understands emotional states through voice \
-        analysis and provides therapeutic interventions.")
+        super().__init__(
+            instructions="Your name Solas. You're talking to Kelly. You are an empathetic voice agent that understands emotional states through voice \
+        analysis and provides therapeutic interventions."
+        )
 
 
 async def entrypoint(ctx: agents.JobContext):
@@ -36,7 +39,7 @@ async def entrypoint(ctx: agents.JobContext):
     )
 
     await session.generate_reply(
-        instructions="Greet the user and offer your assistance."
+        instructions="Introduce yourself by name, greet the user by name and offer your assistance."
     )
 
 

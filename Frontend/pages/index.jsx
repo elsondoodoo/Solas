@@ -290,7 +290,7 @@ export default function Home() {
   return (
     <main style={{ position: 'relative', width: '100vw', height: '100vh' }}>
         <Spline
-        scene="https://prod.spline.design/SAAtNbKSixMJ80Xm/scene.splinecode"
+        scene="https://prod.spline.design/PwDsQ4vGJzfXnO8U/scene.splinecode"
         style={{ position: 'absolute', width: '100%', height: '100%' }}
         onLoad={onSplineLoad}
       />
