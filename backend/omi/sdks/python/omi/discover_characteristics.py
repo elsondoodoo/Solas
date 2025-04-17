@@ -1,7 +1,7 @@
 import asyncio
 from bleak import BleakClient
 
-OMI_MAC = "3336858B-26E1-6706-D3A5-1585E36D425D"  # Replace with your actual MAC
+OMI_MAC = "F6:84:2E:BE:91:41"  # Replace with your actual MAC
 
 async def main():
     async with BleakClient(OMI_MAC) as client:

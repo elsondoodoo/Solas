@@ -7,21 +7,23 @@ from omi.decoder import OmiOpusDecoder
 from asyncio import Queue
 
 # Default Omi MAC address - you should replace this with your device's address
-OMI_MAC = "3336858B-26E1-6706-D3A5-1585E36D425D"
-OMI_CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214"
+OMI_MAC = "F6:84:2E:BE:91:41"
+OMI_CHAR_UUID = "0000180a-0000-1000-8000-00805f9b34fb"
 
 def main():
     # Get API key from environment variable or command-line argument
     api_key = os.getenv("DEEPGRAM_API_KEY")
     if not api_key and len(sys.argv) > 1:
         api_key = sys.argv[1]
-    
+
     if not api_key:
         print("Please provide your Deepgram API key:")
         print("Option 1: Set the DEEPGRAM_API_KEY environment variable")
-        print("Option 2: Pass it as a command-line argument: python main.py YOUR_API_KEY")
+        print(
+            "Option 2: Pass it as a command-line argument: python main.py YOUR_API_KEY"
+        )
         return
-    
+
     # Check if MAC address was provided as a second argument
     mac_address = OMI_MAC
     if len(sys.argv) > 2:
@@ -30,7 +32,7 @@ def main():
     else:
         print(f"Using default MAC address: {mac_address}")
         print("To use a different MAC address: python main.py API_KEY MAC_ADDRESS")
-    
+
     print(f"Transcript will be saved to: {TRANSCRIPT_FILE}")
     print("Starting Omi listening service...")
     print("Press Ctrl+C to stop")
@@ -50,7 +52,7 @@ def main():
         try:
             await asyncio.gather(
                 listen_to_omi(mac_address, OMI_CHAR_UUID, handle_ble_data),
-                transcribe(audio_queue, api_key)
+                transcribe(audio_queue, api_key),
             )
         except Exception as e:
             print(f"Error during execution: {e}")
@@ -58,7 +60,9 @@ def main():
             print("1. Make sure your device is turned on and in range")
             print("2. Check that the MAC address is correct")
             print("3. Run 'python scan.py' to see available Bluetooth devices")
-            print("4. Try again with the correct MAC address: python main.py API_KEY MAC_ADDRESS")
+            print(
+                "4. Try again with the correct MAC address: python main.py API_KEY MAC_ADDRESS"
+            )
 
     try:
         asyncio.run(run())
@@ -67,5 +71,6 @@ def main():
     except Exception as e:
         print(f"Fatal error: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
